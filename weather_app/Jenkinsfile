@@ -42,6 +42,13 @@ pipeline {
                 }
             }
         }
+        stages {
+        stage('Print Kubeconfig') {
+            steps {
+                sh 'cat ~/.kube/config'
+            }
+        }
+    }
         stage('Configure Kubeconfig') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
