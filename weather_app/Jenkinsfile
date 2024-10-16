@@ -42,7 +42,13 @@ pipeline {
                 }
             }
         }
-
+        stage('Configure Kubeconfig') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh 'aws eks update-kubeconfig --region us-east-1 --name test'
+                }
+            }
+        }
         stage('Deploy to Kubernetes') {
             steps {
                 script {
