@@ -48,6 +48,7 @@ pipeline {
                 script {
                     // Set the Kubernetes context (if necessary)
                     sh ' kubectl config use-context  akash@test.us-east-1.eksctl.io'
+                    sh 'kubectl get nodes'
                     
                     // Update the Kubernetes deployment with the new image
                     sh "kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:latest --record"
