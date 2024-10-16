@@ -2,24 +2,42 @@ pipeline {
     agent any
 
     environment {
-        AWS_CREDENTIALS = credentials('aws-credentials')
-        DOCKER_CREDENTIALS = credentials('docker-credentials')
-        DOCKER_IMAGE = 'akashgupta0408/weather-app'
+        DOCKER_IMAGE = 'akashgupta0408/weather-app' // Your Docker Hub image
+        DOCKER_CREDENTIALS = credentials('docker-credentials') // Replace with your Docker credentials ID
+        AWS_CREDENTIALS = credentials('aws-credentials') // Replace with your AWS credentials ID
+        
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Akash-Gupta-ML/Python-Project.git'
+                script {
+                    // Checkout code from the repository
+                    checkout([$class: 'GitSCM', 
+                        branches: [[name: '*/main']], 
+                        userRemoteConfigs: [[url: 'https://github.com/Akash-Gupta-ML/Python-Project.git']]
+                    ])
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS) {
-                        def app = docker.build(DOCKER_IMAGE)
-                        app.push()
+                    // Build the Docker image
+                    sh 'docker build -t $DOCKER_IMAGE .'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Log in to Docker Hub
+                    withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
+                        // Push the image to Docker Hub
+                        sh 'docker push $DOCKER_IMAGE'
                     }
                 }
             }
@@ -28,9 +46,22 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh 'kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:latest'
+                    // Set the Kubernetes context (if necessary)
+                    // sh 'kubectl config use-context test'
+                    
+                    // Update the Kubernetes deployment with the new image
+                    sh "kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE --record"
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the logs for details.'
         }
     }
 }
