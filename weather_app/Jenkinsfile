@@ -42,28 +42,16 @@ pipeline {
                 }
             }
         }
-        stage('Print Kubeconfig') {
-            steps {
-                sh 'cat ~/.kube/config'
-            }
-        }
     
-        stage('Configure Kubeconfig') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-                    sh 'aws eks update-kubeconfig --region us-east-1 --name test'
-                }
-            }
-        }
         stage('Deploy to Kubernetes') {
             steps {
                 script {
                     // Set the Kubernetes context (if necessary)
                     sh ' kubectl config use-context  akash@test.us-east-1.eksctl.io'
-                    sh 'kubectl get nodes'
+                    sh 'kubectl get pods --kubeconfig=/home/akash/.kube/config'
                     
                     // Update the Kubernetes deployment with the new image
-                    sh "kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:latest --record"
+                    sh "kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:latest --record --kubeconfig=/home/akash/.kube/config"
                 }
             }
         }
