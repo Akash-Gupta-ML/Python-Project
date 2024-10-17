@@ -2,20 +2,29 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'akashgupta0408/weather-app'
-        AWS_CREDENTIALS = credentials('aws-credentials')
+        DOCKER_IMAGE = 'akashgupta0408/weather-app' // Your Docker Hub image
+        DOCKER_CREDENTIALS = credentials('docker-credentials') // Replace with your Docker credentials ID
+        AWS_CREDENTIALS = credentials('aws-credentials') // Replace with your AWS credentials ID
+        
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                script {
+                    // Checkout code from the repository
+                    checkout([$class: 'GitSCM', 
+                        branches: [[name: '*/main']], 
+                        userRemoteConfigs: [[url: 'https://github.com/Akash-Gupta-ML/Python-Project.git']]
+                    ])
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Build the Docker image
                     def buildNumber = env.BUILD_NUMBER
                     sh "docker build -t ${DOCKER_IMAGE}:${buildNumber} -f weather_app/Dockerfile weather_app"
                 }
@@ -25,9 +34,11 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
+                    // Log in to Docker Hub
                     withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
-                        sh "docker push ${DOCKER_IMAGE}:${buildNumber}"
+                        // Push the image to Docker Hub
+                        sh 'docker push $DOCKER_IMAGE:${buildNumber}'
                     }
                 }
             }
@@ -36,8 +47,12 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh 'kubectl config use-context akash@test.us-east-1.eksctl.io'
-                    sh "sudo -u jenkins kubectl set image deployment/weather-app weather-app=${DOCKER_IMAGE}:${buildNumber} --record --kubeconfig=/home/akash/.kube/config"
+                    // Set the Kubernetes context (if necessary)
+                    sh ' kubectl config use-context  akash@test.us-east-1.eksctl.io'
+                    sh 'sudo -u jenkins kubectl get pods --kubeconfig=/home/akash/.kube/config'
+                    
+                    // Update the Kubernetes deployment with the new image
+                    sh "sudo -u jenkins kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:${buildNumber} --record --kubeconfig=/home/akash/.kube/config"
                 }
             }
         }
