@@ -48,10 +48,10 @@ pipeline {
                 script {
                     // Set the Kubernetes context (if necessary)
                     sh ' kubectl config use-context  akash@test.us-east-1.eksctl.io'
-                    sh 'kubectl get pods --kubeconfig=/home/akash/.kube/config'
+                    sh 'sudo -u jenkins kubectl get pods --kubeconfig=/home/akash/.kube/config'
                     
                     // Update the Kubernetes deployment with the new image
-                    sh "kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:latest --record --kubeconfig=/home/akash/.kube/config"
+                    sh "sudo -u jenkins kubectl set image deployment/weather-app weather-app=$DOCKER_IMAGE:latest --record --kubeconfig=/home/akash/.kube/config"
                 }
             }
         }
